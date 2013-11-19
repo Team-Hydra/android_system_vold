@@ -508,6 +508,23 @@ int Volume::mountVol() {
 
             free(fstype);
 
+        bool isFatFs = true;
+        if (Fat::check(devicePath)) {
+            if (errno == ENODATA) {
+                SLOGW("%s does not contain a FAT filesystem\n", devicePath);
+                isFatFs = false;
+            } else {
+                errno = EIO;
+                /* Badness - abort the mount */
+                SLOGE("%s failed FS checks (%s)", devicePath, strerror(errno));
+                setState(Volume::State_Idle);
+                return -1;
+            }
+        }
+
+        errno = 0;
+        int gid;
+
         if (isFatFs) {
             if (Fat::doMount(devicePath, getMountpoint(), false, false, false,
                         AID_MEDIA_RW, AID_MEDIA_RW, 0007, true)) {
